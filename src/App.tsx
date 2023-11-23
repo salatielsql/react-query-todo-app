@@ -1,82 +1,52 @@
-import { useCallback, useEffect } from 'react'
-
-// STORES
-import { TodoList } from './components/TodoList'
-import { TodoDetails } from './components/TodoDetails'
+import { useRef } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 
 // COMPONENTS
-import { getTodoById, getTodos } from './services/todos'
-import { useTodos } from './store/todos'
-import { usePageStore } from './store/page-store'
+import { TodoList } from './components/TodoList'
+import { TodoDetails } from './components/TodoDetails'
 import { TodoFilters } from './components/TodoFilters'
 
-function TodoApp() {
-  /**
-   * My store abstration to store Server State
-   */
-  const [todosStore, todosDispatch] = useTodos()
+// STORES
+import { usePageStore } from './store/page-store'
 
+// SERVICES
+import { getTodoById, getTodos, createTodo } from './services/todos'
+
+function TodoApp() {
+  const input = useRef<HTMLInputElement>(null)
   /**
    * My store abstration to store Client State
    */
-  const [pageState, pageDispatch] = usePageStore()
+  const [{ selectedTodoId, todosFilters }, pageDispatch] = usePageStore()
 
-  const fetchTodos = useCallback(
-    async (filters: Record<string, string> | null) => {
-      todosDispatch({ type: 'set-todos-loading', state: true })
-      todosDispatch({ type: 'set-todos-error', state: false })
-
-      try {
-        const data = await getTodos(filters || undefined)
-
-        todosDispatch({ type: 'set-todos', state: data })
-        todosDispatch({ type: 'set-todos-loading', state: false })
-      } catch (e) {
-        todosDispatch({ type: 'set-todos-error', state: true })
-        todosDispatch({ type: 'set-todos-loading', state: false })
-        todosDispatch({ type: 'set-todos', state: null })
-      }
-    },
-    [todosDispatch]
+  /**
+   * React Query now is my Server State / Data Layer abstration
+   */
+  const todosQuery = useQuery(['todos', todosFilters], () =>
+    getTodos(todosFilters)
   )
 
-  const fetchTodoById = useCallback(
-    async (todoId: string) => {
-      todosDispatch({ type: 'set-todo-loading', state: true })
-      todosDispatch({ type: 'set-todo-error', state: false })
-      todosDispatch({ type: 'set-todo', state: null })
-
-      try {
-        const data = await getTodoById(todoId)
-
-        todosDispatch({ type: 'set-todo', state: data })
-        todosDispatch({ type: 'set-todo-loading', state: false })
-      } catch (e) {
-        todosDispatch({ type: 'set-todo', state: null })
-        todosDispatch({ type: 'set-todo-error', state: true })
-        todosDispatch({ type: 'set-todo-loading', state: false })
-      }
-    },
-    [todosDispatch]
+  const todoDetailQuery = useQuery(
+    ['todos-detail', selectedTodoId],
+    () => getTodoById(selectedTodoId),
+    { enabled: !!selectedTodoId }
   )
 
-  useEffect(() => {
-    fetchTodos(pageState.todosFilters)
-  }, [fetchTodos, pageState.todosFilters])
+  const createTodoMutation = useMutation({
+    mutationFn: (todoTitle: string) => createTodo(todoTitle),
+    onSuccess: (todo) => {
+      todosQuery.refetch()
+      alert(`Todo "${todo?.title}" created! #${todo?.id}`)
+    },
+  })
 
-  useEffect(() => {
-    if (pageState.selectedTodoId) {
-      fetchTodoById(pageState.selectedTodoId)
-    }
-  }, [fetchTodoById, pageState.selectedTodoId])
-  console.log(pageState)
   return (
     <>
       <h1>My todo list:</h1>
 
       <TodoFilters
-        titleValue={pageState.todosFilters?.title}
-        selectedTag={pageState.todosFilters?.tag}
+        titleValue={todosFilters?.title}
+        selectedTag={todosFilters?.tag}
         onTitleChange={(value) =>
           pageDispatch({ type: 'set-filters', state: { title: value } })
         }
@@ -86,22 +56,38 @@ function TodoApp() {
       />
 
       <TodoList
-        todos={todosStore.todos}
-        isLoading={todosStore.isTodosLoading}
-        hasError={todosStore.hasTodosError}
+        todos={todosQuery.data}
+        isLoading={todosQuery.isLoading}
+        hasError={todosQuery.isError}
         onTodoClick={(todoId: string) =>
           pageDispatch({ type: 'set-selected-todo-id', state: todoId })
         }
-        onTryAgainPress={() => fetchTodos(pageState.todosFilters)}
+        onTryAgainPress={todosQuery.refetch}
       />
 
+      <div>
+        <input ref={input} placeholder="create a new todo" />
+        <button
+          disabled={createTodoMutation.isLoading}
+          onClick={() => {
+            if (input.current?.value) {
+              createTodoMutation.mutate(input.current.value)
+              input.current.value = ''
+            }
+          }}
+        >
+          {createTodoMutation.isLoading ? 'creating todo....' : 'create todo'}
+        </button>
+      </div>
+
       <TodoDetails
-        todo={todosStore.todo}
-        isLoading={todosStore.isTodoLoading}
-        hasError={todosStore.hasTodoError}
-        onTryAgainPress={() => {
-          if (pageState.selectedTodoId) fetchTodoById(pageState.selectedTodoId)
-        }}
+        todo={todoDetailQuery.data}
+        isLoading={
+          todoDetailQuery.isLoading &&
+          todoDetailQuery.fetchStatus === 'fetching'
+        }
+        hasError={todoDetailQuery.isError}
+        onTryAgainPress={todoDetailQuery.refetch}
       />
     </>
   )

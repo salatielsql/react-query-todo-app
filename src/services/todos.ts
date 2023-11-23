@@ -10,8 +10,22 @@ export async function getTodos(filters?: Record<string, string>) {
   return data
 }
 
-export async function getTodoById(todoId: string) {
+export async function getTodoById(todoId: string | null) {
   const response = await fetch(`/todos/${todoId}`)
+
+  const data: Todo | null = await response.json()
+
+  return data
+}
+
+export async function createTodo(todoTitle: string) {
+  const response = await fetch(`/todos`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title: todoTitle }),
+  })
 
   const data: Todo | null = await response.json()
 

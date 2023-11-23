@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay, StrictRequest, DefaultBodyType } from 'msw'
+import { createId } from '@paralleldrive/cuid2'
 
 export type Todo = {
   id: string
@@ -8,7 +9,7 @@ export type Todo = {
   tags: string[]
 }
 
-const fakeDB: Todo[] = [
+let fakeDB: Todo[] = [
   {
     id: 'clp9nrb4d000108lahx8obe9u',
     title: 'Create React Query Presentation Slides',
@@ -83,5 +84,24 @@ export const handlers = [
     const result = fakeDB.find((todo) => todo.id === params.id)
 
     return HttpResponse.json(result || null)
+  }),
+  http.post('/todos', async ({ request }) => {
+    await delay(1000)
+
+    const body = (await request.json()) as { title: string }
+
+    const previousDb = fakeDB
+
+    const todo: Todo = {
+      id: createId(),
+      title: body.title,
+      assignee: 'Salatiel',
+      done: false,
+      tags: [],
+    }
+
+    fakeDB = [...previousDb, todo]
+
+    return HttpResponse.json(todo)
   }),
 ]
