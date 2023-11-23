@@ -6,8 +6,8 @@ const ACTION_TYPES = {
 } as const
 
 type PageStoreState = {
-  todosFilters: Record<string, string> | null
-  selectedTodoId: string | null
+  todosFilters?: Record<string, string>
+  selectedTodoId?: string | null
 }
 
 type Action = { type: keyof typeof ACTION_TYPES; state: unknown }
@@ -18,7 +18,7 @@ type Action = { type: keyof typeof ACTION_TYPES; state: unknown }
  */
 export function usePageStore(): [PageStoreState, React.Dispatch<Action>] {
   return useReducer(reducer, {
-    todosFilters: null,
+    todosFilters: undefined,
     selectedTodoId: null,
   })
 }

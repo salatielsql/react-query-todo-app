@@ -19,10 +19,10 @@ function TodoApp() {
   /**
    * My store abstration to store Client State
    */
-  const [pageState, pageDispatch] = usePageStore()
+  const [{ selectedTodoId, todosFilters }, pageDispatch] = usePageStore()
 
   const fetchTodos = useCallback(
-    async (filters: Record<string, string> | null) => {
+    async (filters?: Record<string, string> | null) => {
       todosDispatch({ type: 'set-todos-loading', state: true })
       todosDispatch({ type: 'set-todos-error', state: false })
 
@@ -61,22 +61,22 @@ function TodoApp() {
   )
 
   useEffect(() => {
-    fetchTodos(pageState.todosFilters)
-  }, [fetchTodos, pageState.todosFilters])
+    fetchTodos(todosFilters)
+  }, [fetchTodos, todosFilters])
 
   useEffect(() => {
-    if (pageState.selectedTodoId) {
-      fetchTodoById(pageState.selectedTodoId)
+    if (selectedTodoId) {
+      fetchTodoById(selectedTodoId)
     }
-  }, [fetchTodoById, pageState.selectedTodoId])
-  console.log(pageState)
+  }, [fetchTodoById, selectedTodoId])
+
   return (
     <>
       <h1>My todo list:</h1>
 
       <TodoFilters
-        titleValue={pageState.todosFilters?.title}
-        selectedTag={pageState.todosFilters?.tag}
+        titleValue={todosFilters?.title}
+        selectedTag={todosFilters?.tag}
         onTitleChange={(value) =>
           pageDispatch({ type: 'set-filters', state: { title: value } })
         }
@@ -92,7 +92,7 @@ function TodoApp() {
         onTodoClick={(todoId: string) =>
           pageDispatch({ type: 'set-selected-todo-id', state: todoId })
         }
-        onTryAgainPress={() => fetchTodos(pageState.todosFilters)}
+        onTryAgainPress={() => fetchTodos(todosFilters)}
       />
 
       <TodoDetails
@@ -100,7 +100,7 @@ function TodoApp() {
         isLoading={todosStore.isTodoLoading}
         hasError={todosStore.hasTodoError}
         onTryAgainPress={() => {
-          if (pageState.selectedTodoId) fetchTodoById(pageState.selectedTodoId)
+          if (selectedTodoId) fetchTodoById(selectedTodoId)
         }}
       />
     </>

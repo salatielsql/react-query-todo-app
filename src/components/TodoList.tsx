@@ -1,7 +1,7 @@
 import { type Todo } from '../api/handlers'
 
 export function TodoList(props: {
-  todos: Todo[] | null
+  todos?: Todo[] | null
   isLoading: boolean
   hasError: boolean
   onTodoClick(todoId: string): void
